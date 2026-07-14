@@ -1,0 +1,21 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const post_controller_factory_1 = require("./main/factories/post-controller-factory");
+const user_controller_factory_1 = require("./main/factories/user-controller-factory");
+const authorization_1 = require("./main/auth/authorization");
+const router = express_1.default.Router();
+const postController = (0, post_controller_factory_1.makePostController)();
+const userController = (0, user_controller_factory_1.makeUserController)();
+router.post('/posts', (0, authorization_1.authorize)('create_post'), postController.create);
+router.put('/posts/:id', (0, authorization_1.authorize)('edit_post'), postController.update);
+router.delete('/posts/:id', (0, authorization_1.authorize)('edit_post'), postController.delete);
+router.get('/posts/search', (0, authorization_1.authorize)('view_post'), postController.search);
+router.get('/posts', (0, authorization_1.authorize)('view_post'), postController.list);
+router.get('/posts/:id', (0, authorization_1.authorize)('view_post'), postController.getById);
+router.post('/users', (0, authorization_1.authorize)('manage_users'), userController.create);
+router.get('/users', (0, authorization_1.authorize)('manage_users'), userController.list);
+exports.default = router;
