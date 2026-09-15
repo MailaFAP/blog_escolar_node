@@ -8,7 +8,7 @@ class UserController {
         this.create = async (req, res) => {
             try {
                 const user = await this.createUserUseCase.execute(req.body);
-                res.status(201).json(user);
+                res.status(201).json(user.toSafeJSON());
             }
             catch (error) {
                 const message = error instanceof Error ? error.message : 'Unexpected error';
@@ -18,7 +18,7 @@ class UserController {
         this.list = async (_req, res) => {
             try {
                 const users = await this.listUsersUseCase.execute();
-                res.status(200).json(users);
+                res.status(200).json(users.map((user) => user.toSafeJSON()));
             }
             catch (error) {
                 const message = error instanceof Error ? error.message : 'Unexpected error';

@@ -1,16 +1,29 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateUserUseCase = void 0;
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const SALT_ROUNDS = 10;
 class CreateUserUseCase {
     constructor(repository) {
         this.repository = repository;
     }
     async execute(input) {
         this.validate(input);
+        const existing = await this.repository.findByEmail(input.email.trim().toLowerCase());
+        if (existing) {
+            throw new Error('Email is already in use.');
+        }
         const permissions = this.getPermissionsForRole(input.role);
+        const passwordHash = await bcryptjs_1.default.hash(input.password, SALT_ROUNDS);
         return this.repository.create({
-            ...input,
+            name: input.name.trim(),
+            email: input.email.trim().toLowerCase(),
+            role: input.role,
             permissions,
+            passwordHash,
         });
     }
     validate(input) {
@@ -22,6 +35,9 @@ class CreateUserUseCase {
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
             throw new Error('A valid email is required.');
+        }
+        if (!input.password || input.password.length < 8) {
+            throw new Error('Password must be at least 8 characters long.');
         }
         if (!['teacher', 'student', 'admin'].includes(input.role)) {
             throw new Error('A valid role is required.');

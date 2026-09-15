@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import { AUTH_COOKIE_NAME, verifyToken } from './jwt';
 
 export interface AuthenticatedUser {
   id: number;
@@ -12,6 +13,18 @@ declare global {
       user?: AuthenticatedUser;
     }
   }
+}
+
+export function authenticate(req: Request, res: Response, next: NextFunction): void {
+  const user = getAuthenticatedUser(req);
+
+  if (!user) {
+    res.status(401).json({ message: 'Authentication required.' });
+    return;
+  }
+
+  req.user = user;
+  next();
 }
 
 export function authorize(requiredPermission: string) {
@@ -34,26 +47,30 @@ export function authorize(requiredPermission: string) {
 }
 
 export function getAuthenticatedUser(req: Request): AuthenticatedUser | null {
-  const userIdHeader = req.headers['x-user-id'];
-  const userRoleHeader = req.headers['x-user-role'];
+  const token = req.cookies?.[AUTH_COOKIE_NAME] || getBearerToken(req);
 
-  if (!userIdHeader || !userRoleHeader) {
+  if (!token) {
     return null;
   }
 
-  const userId = Number(userIdHeader);
-  if (!Number.isInteger(userId) || userId <= 0) {
+  const payload = verifyToken(token);
+  if (!payload) {
     return null;
   }
-
-  const role = String(userRoleHeader).toLowerCase();
-  const permissions = getPermissionsForRole(role);
 
   return {
-    id: userId,
-    role,
-    permissions,
+    id: payload.id,
+    role: payload.role,
+    permissions: payload.permissions,
   };
+}
+
+function getBearerToken(req: Request): string | null {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) {
+    return null;
+  }
+  return header.slice('Bearer '.length);
 }
 
 export function hasPermission(user: AuthenticatedUser, requiredPermission: string): boolean {
@@ -62,14 +79,4 @@ export function hasPermission(user: AuthenticatedUser, requiredPermission: strin
   }
 
   return user.permissions.includes(requiredPermission);
-}
-
-function getPermissionsForRole(role: string): string[] {
-  const rolePermissions: Record<string, string[]> = {
-    teacher: ['create_post', 'edit_post', 'view_post'],
-    student: ['view_post'],
-    admin: ['create_post', 'edit_post', 'view_post', 'manage_users'],
-  };
-
-  return rolePermissions[role] ?? [];
 }

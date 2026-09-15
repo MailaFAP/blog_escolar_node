@@ -5,8 +5,8 @@ class ListPostsUseCase {
     constructor(repository) {
         this.repository = repository;
     }
-    async execute(user) {
-        return this.repository.list(user?.id, user?.role);
+    async execute() {
+        return this.repository.list();
     }
 }
 exports.ListPostsUseCase = ListPostsUseCase;

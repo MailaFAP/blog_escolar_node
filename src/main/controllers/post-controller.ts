@@ -65,9 +65,9 @@ export class PostController {
     }
   };
 
-  list = async (req: Request, res: Response): Promise<void> => {
+  list = async (_req: Request, res: Response): Promise<void> => {
     try {
-      const posts = await this.listPostsUseCase.execute(req.user ? { id: req.user.id, role: req.user.role } : undefined);
+      const posts = await this.listPostsUseCase.execute();
       res.status(200).json(posts);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unexpected error';
@@ -78,7 +78,7 @@ export class PostController {
   getById = async (req: Request, res: Response): Promise<void> => {
     try {
       const id = Number(req.params.id);
-      const post = await this.getPostByIdUseCase.execute(id, req.user ? { id: req.user.id, role: req.user.role } : undefined);
+      const post = await this.getPostByIdUseCase.execute(id);
       res.status(200).json(post);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unexpected error';
@@ -89,7 +89,7 @@ export class PostController {
   search = async (req: Request, res: Response): Promise<void> => {
     try {
       const query = String(req.query.q || '');
-      const posts = await this.searchPostsUseCase.execute(query, req.user ? { id: req.user.id, role: req.user.role } : undefined);
+      const posts = await this.searchPostsUseCase.execute(query);
       res.status(200).json(posts);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unexpected error';
