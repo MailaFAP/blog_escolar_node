@@ -3,7 +3,7 @@ export const swaggerDocument = {
   info: {
     title: 'API Blog Escolar',
     version: '1.0.0',
-    description: 'Documentação técnica interativa da API do Blog Escolar. Permite gerenciar usuários e postagens de aulas. A autenticação é baseada em Headers customizados (`x-user-id` e `x-user-role`).',
+    description: 'Documentação técnica interativa da API do Blog Escolar. Permite gerenciar usuários e postagens de aulas. A autenticação é feita via JWT (cookie httpOnly `auth_token`, obtido em `POST /auth/login`, ou header `Authorization: Bearer <token>`).',
   },
   servers: [
     {
@@ -13,23 +13,22 @@ export const swaggerDocument = {
   ],
   security: [
     {
-      UserIdHeader: [],
-      UserRoleHeader: [],
+      CookieAuth: [],
     },
   ],
   components: {
     securitySchemes: {
-      UserIdHeader: {
+      CookieAuth: {
         type: 'apiKey',
-        in: 'header',
-        name: 'x-user-id',
-        description: 'ID do Usuário no banco (ex: 1, 2)',
+        in: 'cookie',
+        name: 'auth_token',
+        description: 'Token JWT emitido por POST /auth/login.',
       },
-      UserRoleHeader: {
-        type: 'apiKey',
-        in: 'header',
-        name: 'x-user-role',
-        description: 'Cargo do usuário (admin, teacher, student)',
+      BearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Alternativa ao cookie: enviar o token JWT no header Authorization.',
       },
     },
     schemas: {
@@ -44,10 +43,11 @@ export const swaggerDocument = {
       },
       CreateUserInput: {
         type: 'object',
-        required: ['name', 'email', 'role'],
+        required: ['name', 'email', 'password', 'role'],
         properties: {
           name: { type: 'string', example: 'Prof. Carlos' },
           email: { type: 'string', example: 'carlos@escola.com' },
+          password: { type: 'string', format: 'password', example: 'SenhaForte123' },
           role: { type: 'string', enum: ['admin', 'teacher', 'student'], example: 'teacher' },
         },
       },
@@ -90,6 +90,159 @@ export const swaggerDocument = {
     },
   },
   paths: {
+    '/auth/register': {
+      post: {
+        summary: 'Criar a própria conta de professor(a)',
+        description: 'Auto-cadastro exclusivo para professores(as). Alunos(as) e visitantes não precisam de conta para ler os posts. Não permite criar contas com papel `admin` ou `student`. Autentica automaticamente após o cadastro (cookie httpOnly).',
+        tags: ['Autenticação'],
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'email', 'password', 'role'],
+                properties: {
+                  name: { type: 'string', example: 'Ana Souza' },
+                  email: { type: 'string', example: 'ana@escola.com' },
+                  password: { type: 'string', format: 'password', example: 'SenhaForte123' },
+                  role: { type: 'string', enum: ['teacher'], example: 'teacher' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Conta criada com sucesso.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/User' },
+              },
+            },
+          },
+          400: {
+            description: 'Erro de validação, papel inválido ou email já cadastrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/auth/login': {
+      post: {
+        summary: 'Autenticar usuário',
+        description: 'Valida email e senha e retorna um cookie httpOnly (`auth_token`) com o JWT da sessão. Restrito a contas `teacher`/`admin`; leitura de posts não exige login.',
+        tags: ['Autenticação'],
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email', 'password'],
+                properties: {
+                  email: { type: 'string', example: 'carlos@escola.com' },
+                  password: { type: 'string', format: 'password', example: 'SenhaForte123' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Autenticado com sucesso.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/User' },
+              },
+            },
+          },
+          401: {
+            description: 'Email ou senha inválidos.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/auth/logout': {
+      post: {
+        summary: 'Encerrar sessão',
+        description: 'Remove o cookie de autenticação.',
+        tags: ['Autenticação'],
+        responses: {
+          204: { description: 'Sessão encerrada.' },
+        },
+      },
+    },
+    '/auth/me': {
+      get: {
+        summary: 'Obter usuário autenticado',
+        description: 'Retorna os dados do usuário autenticado com base no cookie/token atual.',
+        tags: ['Autenticação'],
+        responses: {
+          200: {
+            description: 'Usuário autenticado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/User' },
+              },
+            },
+          },
+          401: { description: 'Não autenticado.' },
+        },
+      },
+    },
+    '/auth/password': {
+      put: {
+        summary: 'Trocar a própria senha',
+        description: 'Permite ao usuário autenticado trocar sua senha, informando a senha atual.',
+        tags: ['Autenticação'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['currentPassword', 'newPassword'],
+                properties: {
+                  currentPassword: { type: 'string', format: 'password', example: 'SenhaAtual123' },
+                  newPassword: { type: 'string', format: 'password', example: 'NovaSenha456' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          204: { description: 'Senha alterada com sucesso.' },
+          400: {
+            description: 'Nova senha inválida (menor que 8 caracteres ou igual à atual).',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          401: {
+            description: 'Não autenticado ou senha atual incorreta.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/users': {
       post: {
         summary: 'Criar um novo usuário',
@@ -179,8 +332,9 @@ export const swaggerDocument = {
       },
       get: {
         summary: 'Listar posts',
-        description: 'Retorna uma lista de posts. Se o usuário for um professor (`teacher`), retorna apenas os posts criados por ele. Se for admin, retorna todos. Alunos (`student`) não têm permissão para listar todos.',
+        description: 'Retorna a lista de todos os posts, de todos os professores. Endpoint público, não exige login.',
         tags: ['Postagens'],
+        security: [],
         responses: {
           200: {
             description: 'Lista obtida com sucesso.',
@@ -202,8 +356,9 @@ export const swaggerDocument = {
     '/posts/search': {
       get: {
         summary: 'Buscar posts por palavra-chave',
-        description: 'Busca posts cujo título ou conteúdo correspondam ao termo de busca. Professores buscam apenas em seus próprios posts. Alunos não têm permissão para buscar.',
+        description: 'Busca posts cujo título ou conteúdo correspondam ao termo de busca, entre todos os posts de todos os professores. Endpoint público, não exige login.',
         tags: ['Postagens'],
+        security: [],
         parameters: [
           {
             name: 'q',
@@ -234,8 +389,9 @@ export const swaggerDocument = {
     '/posts/{id}': {
       get: {
         summary: 'Obter postagem por ID',
-        description: 'Retorna os detalhes de uma postagem específica. Acessível a todas as roles (admin, teacher, student).',
+        description: 'Retorna os detalhes de uma postagem específica. Endpoint público, não exige login.',
         tags: ['Postagens'],
+        security: [],
         parameters: [
           {
             name: 'id',

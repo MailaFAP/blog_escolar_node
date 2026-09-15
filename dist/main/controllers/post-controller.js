@@ -52,9 +52,9 @@ class PostController {
                 res.status(400).json({ message });
             }
         };
-        this.list = async (req, res) => {
+        this.list = async (_req, res) => {
             try {
-                const posts = await this.listPostsUseCase.execute(req.user ? { id: req.user.id, role: req.user.role } : undefined);
+                const posts = await this.listPostsUseCase.execute();
                 res.status(200).json(posts);
             }
             catch (error) {
@@ -65,7 +65,7 @@ class PostController {
         this.getById = async (req, res) => {
             try {
                 const id = Number(req.params.id);
-                const post = await this.getPostByIdUseCase.execute(id, req.user ? { id: req.user.id, role: req.user.role } : undefined);
+                const post = await this.getPostByIdUseCase.execute(id);
                 res.status(200).json(post);
             }
             catch (error) {
@@ -76,7 +76,7 @@ class PostController {
         this.search = async (req, res) => {
             try {
                 const query = String(req.query.q || '');
-                const posts = await this.searchPostsUseCase.execute(query, req.user ? { id: req.user.id, role: req.user.role } : undefined);
+                const posts = await this.searchPostsUseCase.execute(query);
                 res.status(200).json(posts);
             }
             catch (error) {

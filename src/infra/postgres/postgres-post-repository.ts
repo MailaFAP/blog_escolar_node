@@ -56,29 +56,18 @@ export class PostgresPostRepository implements PostRepository {
     return result.rowCount !== null && result.rowCount > 0;
   }
 
-  async list(userId?: number, role?: string): Promise<Post[]> {
-    const whereClause = role === 'teacher' && userId ? 'WHERE created_by = $1' : '';
-    const values: unknown[] = role === 'teacher' && userId ? [userId] : [];
-
+  async list(): Promise<Post[]> {
     const result = await this.pool.query(
-      `SELECT id, title, content, author, url, created_by, created_at, updated_at FROM posts ${whereClause} ORDER BY created_at DESC`,
-      values
+      `SELECT id, title, content, author, url, created_by, created_at, updated_at FROM posts ORDER BY created_at DESC`
     );
 
     return Promise.all(result.rows.map((row: Record<string, unknown>) => this.mapRowToPost(row)));
   }
 
-  async getById(id: number, userId?: number, role?: string): Promise<Post | null> {
-    const whereClause = role === 'teacher' && userId ? 'AND created_by = $2' : '';
-    const values: unknown[] = [id];
-
-    if (role === 'teacher' && userId) {
-      values.push(userId);
-    }
-
+  async getById(id: number): Promise<Post | null> {
     const result = await this.pool.query(
-      `SELECT id, title, content, author, url, created_by, created_at, updated_at FROM posts WHERE id = $1 ${whereClause}`,
-      values
+      `SELECT id, title, content, author, url, created_by, created_at, updated_at FROM posts WHERE id = $1`,
+      [id]
     );
 
     if (result.rowCount === 0) {
@@ -88,20 +77,13 @@ export class PostgresPostRepository implements PostRepository {
     return this.mapRowToPost(result.rows[0]);
   }
 
-  async search(query: string, userId?: number, role?: string): Promise<Post[]> {
-    const whereClause = role === 'teacher' && userId ? 'AND created_by = $2' : '';
-    const values: unknown[] = [`%${query.toLowerCase()}%`];
-
-    if (role === 'teacher' && userId) {
-      values.push(userId);
-    }
-
+  async search(query: string): Promise<Post[]> {
     const result = await this.pool.query(
       `SELECT id, title, content, author, url, created_by, created_at, updated_at
        FROM posts
-       WHERE (LOWER(title) LIKE $1 OR LOWER(content) LIKE $1) ${whereClause}
+       WHERE (LOWER(title) LIKE $1 OR LOWER(content) LIKE $1)
        ORDER BY created_at DESC`,
-      values
+      [`%${query.toLowerCase()}%`]
     );
 
     return Promise.all(result.rows.map((row: Record<string, unknown>) => this.mapRowToPost(row)));

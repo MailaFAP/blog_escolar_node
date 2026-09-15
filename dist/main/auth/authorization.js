@@ -1,8 +1,19 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.authenticate = authenticate;
 exports.authorize = authorize;
 exports.getAuthenticatedUser = getAuthenticatedUser;
 exports.hasPermission = hasPermission;
+const jwt_1 = require("./jwt");
+function authenticate(req, res, next) {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+        res.status(401).json({ message: 'Authentication required.' });
+        return;
+    }
+    req.user = user;
+    next();
+}
 function authorize(requiredPermission) {
     return (req, res, next) => {
         const user = getAuthenticatedUser(req);
@@ -19,34 +30,30 @@ function authorize(requiredPermission) {
     };
 }
 function getAuthenticatedUser(req) {
-    const userIdHeader = req.headers['x-user-id'];
-    const userRoleHeader = req.headers['x-user-role'];
-    if (!userIdHeader || !userRoleHeader) {
+    const token = req.cookies?.[jwt_1.AUTH_COOKIE_NAME] || getBearerToken(req);
+    if (!token) {
         return null;
     }
-    const userId = Number(userIdHeader);
-    if (!Number.isInteger(userId) || userId <= 0) {
+    const payload = (0, jwt_1.verifyToken)(token);
+    if (!payload) {
         return null;
     }
-    const role = String(userRoleHeader).toLowerCase();
-    const permissions = getPermissionsForRole(role);
     return {
-        id: userId,
-        role,
-        permissions,
+        id: payload.id,
+        role: payload.role,
+        permissions: payload.permissions,
     };
+}
+function getBearerToken(req) {
+    const header = req.headers.authorization;
+    if (!header?.startsWith('Bearer ')) {
+        return null;
+    }
+    return header.slice('Bearer '.length);
 }
 function hasPermission(user, requiredPermission) {
     if (user.role === 'admin') {
         return true;
     }
     return user.permissions.includes(requiredPermission);
-}
-function getPermissionsForRole(role) {
-    const rolePermissions = {
-        teacher: ['create_post', 'edit_post', 'view_post'],
-        student: ['view_post'],
-        admin: ['create_post', 'edit_post', 'view_post', 'manage_users'],
-    };
-    return rolePermissions[role] ?? [];
 }
