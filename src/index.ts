@@ -93,7 +93,7 @@ async function seedDefaultAdmin(): Promise<void> {
     ['Administrador', email, permissions, passwordHash]
   );
 
-  console.log(`Seeded default admin user: ${email} / ${password} (change this password after first login)`);
+  console.log(`Seeded default admin user: ${email}. Change the configured password after first login.`);
 }
 
 bootstrap();

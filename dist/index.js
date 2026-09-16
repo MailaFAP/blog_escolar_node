@@ -79,6 +79,6 @@ async function seedDefaultAdmin() {
     const permissions = JSON.stringify(['create_post', 'edit_post', 'view_post', 'manage_users']);
     await database_1.database.query(`INSERT INTO users (name, email, role, permissions, password_hash, created_at)
      VALUES ($1, $2, 'admin', $3, $4, NOW())`, ['Administrador', email, permissions, passwordHash]);
-    console.log(`Seeded default admin user: ${email} / ${password} (change this password after first login)`);
+    console.log(`Seeded default admin user: ${email}. Change the configured password after first login.`);
 }
 bootstrap();
