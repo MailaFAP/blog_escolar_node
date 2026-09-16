@@ -1,262 +1,267 @@
-# 🏫 API Blog Escolar
+# Blog Escolar
 
-Uma API REST desenvolvida em **Node.js**, **TypeScript** e **Express** para gerenciamento de postagens escolares com persistência em banco de dados **PostgreSQL**. O projeto adota princípios de **Clean Architecture** (Arquitetura Limpa) e **SOLID** para garantir robustez, manutenibilidade e facilidade de testes.
+Aplicação full stack para publicação e leitura de posts escolares. O projeto possui uma API REST em Node.js/TypeScript e uma interface web em React, com persistência em PostgreSQL, autenticação real e controle de permissões por papel.
 
-> 📝 **Documentação Interativa (Swagger UI):** Com a aplicação em execução, acesse **[http://localhost:3000/api-docs](http://localhost:3000/api-docs)** para visualizar e testar todos os endpoints de forma interativa e visual diretamente no navegador.
+## Visão geral
 
----
+- **Backend:** Node.js, TypeScript, Express 5, PostgreSQL e `pg`.
+- **Frontend:** React, TypeScript, Vite, React Router, Axios e styled-components.
+- **Autenticação:** senha com bcrypt e sessão JWT em cookie `httpOnly`.
+- **Autorização:** RBAC para `teacher` e `admin`.
+- **Documentação da API:** Swagger UI em `http://localhost:3000/api-docs`.
+- **Testes:** Jest e ts-jest.
 
-## 🏗️ Arquitetura do Projeto
+## Arquitetura
 
-A aplicação está organizada seguindo os conceitos de isolamento de camadas da Clean Architecture:
+O backend segue uma separação inspirada em Clean Architecture:
 
-```
+```text
 src/
-├── domain/            # Camada de Negócio Pura (Entidades e Interfaces do Repositório)
-│   ├── post.ts
-│   ├── post-repository.ts
-│   └── user.ts
-│
-├── application/       # Regras de Aplicação (Casos de Uso)
-│   └── usecases/      # Create, Read, Update, Delete, List, Search
-│
-├── infra/             # Detalhes de Infraestrutura (Banco de dados Postgres, etc.)
-│   ├── database.ts
-│   └── postgres/      # Implementação dos Repositórios usando pg (node-postgres)
-│
-├── main/              # Ponto de Entrada, Factories, Controladores e Middlewares
-│   ├── auth/          # Middleware de Autorização baseado em Headers
-│   ├── controllers/   # Adaptadores para o Express
-│   └── factories/     # Injeção de dependências e instanciação dos Casos de Uso
-│
-└── routes.ts          # Definição e mapeamento das rotas HTTP
+├── domain/                      # Entidades e contratos dos repositórios
+├── application/usecases/        # Regras de negócio isoladas
+│   ├── authenticate-user.ts
+│   ├── change-password.ts
+│   ├── create-post.ts
+│   ├── create-user.ts
+│   ├── delete-post.ts
+│   ├── get-post-by-id.ts
+│   ├── list-posts.ts
+│   ├── list-users.ts
+│   ├── search-posts.ts
+│   └── update-post.ts
+├── infra/                       # Pool PostgreSQL e repositórios concretos
+├── main/
+│   ├── auth/                    # JWT, autenticação e autorização
+│   ├── controllers/             # Adaptadores HTTP
+│   └── factories/               # Composição das dependências
+├── index.ts                     # Inicialização da aplicação e schema
+└── routes.ts                    # Rotas HTTP
+
+frontend/
+├── src/api/                     # Cliente HTTP e chamadas à API
+├── src/auth/                    # Contexto e proteção de rotas
+├── src/components/              # Navbar, formulários e UI reutilizável
+├── src/pages/                   # Telas da aplicação
+├── src/styles/                  # Estilos globais
+└── src/App.tsx                  # Roteamento principal
 ```
 
----
-
-## 🛠️ Setup Inicial e Execução
+## Configuração
 
 ### Pré-requisitos
-- [Docker](https://www.docker.com/) instalado.
-- [Docker Compose](https://docs.docker.com/compose/) instalado.
 
-### 🐳 Execução com Docker (Recomendado)
+- Node.js 20 ou superior.
+- npm.
+- Docker e Docker Compose, caso queira executar o PostgreSQL em container.
 
-A aplicação já está totalmente conteinerizada com Docker e Docker Compose, contendo a API e o Banco de Dados integrados.
+### Variáveis de ambiente
 
-1. Clone o repositório.
-2. Certifique-se de que a porta `3000` (API) e `5432` (PostgreSQL) não estão em uso no seu computador.
-3. Suba os containers com o comando:
-   ```bash
-   docker-compose up -d --build
-   ```
-4. A API estará pronta e respondendo em `http://localhost:3000`.
-
-### 💻 Execução para Desenvolvimento Local (Sem Docker)
-
-Se preferir rodar localmente no seu host:
-
-1. Certifique-se de ter um banco PostgreSQL rodando e preencha as variáveis no arquivo `.env` localizado na raiz:
-   ```env
-   DB_HOST=localhost
-   DB_PORT=5432
-   DB_USER=postgres
-   DB_PASSWORD=postgres
-   DB_NAME=blog_escolar
-   PORT=3000
-   ```
-2. Instale as dependências:
-   ```bash
-   npm install
-   ```
-3. Execute o servidor de desenvolvimento:
-   ```bash
-   npm run dev
-   ```
-
----
-
-## 🔐 Autenticação e Autorização (RBAC)
-
-A API utiliza controle de acesso baseado em papéis (Role-Based Access Control - RBAC). A identificação e autenticação dos usuários é feita diretamente por meio de dois headers HTTP personalizados enviando o ID e a Role do usuário requisitante:
-
-| Header | Descrição | Exemplo |
-| :--- | :--- | :--- |
-| `x-user-id` | ID numérico do usuário no banco | `1` |
-| `x-user-role` | Cargo do usuário (`admin`, `teacher`, `student`) | `teacher` |
-
-### Tabela de Permissões
-
-| Recurso / Rota | Permissão Requerida | Admin | Professor (Teacher) | Aluno (Student) |
-| :--- | :--- | :---: | :---: | :---: |
-| `POST /posts` | `create_post` | ✅ | ✅ | ❌ |
-| `PUT /posts/:id` | `edit_post` | ✅ | ✅ *(Apenas os seus)* | ❌ |
-| `DELETE /posts/:id` | `edit_post` | ✅ | ✅ *(Apenas os seus)* | ❌ |
-| `GET /posts` | `list_posts` | ✅ | ✅ *(Apenas os seus)* | ❌ |
-| `GET /posts/search` | `list_posts` | ✅ | ✅ *(Apenas os seus)* | ❌ |
-| `GET /posts/:id` | `view_post` | ✅ | ✅ | ✅ |
-| `POST /users` | `manage_users` | ✅ | ❌ | ❌ |
-| `GET /users` | `manage_users` | ✅ | ❌ | ❌ |
-
----
-
-## 📖 Guia de Uso das APIs (API Docs)
-
-Você tem duas formas de consultar e testar os endpoints da API:
-
-### 📝 Swagger UI (Documentação Interativa - Recomendado)
-A aplicação conta com uma interface gráfica para testes e documentação dos contratos das rotas.
-Com os containers ativos, basta acessar pelo navegador:
-👉 **[http://localhost:3000/api-docs](http://localhost:3000/api-docs)**
-
-Você poderá testar as rotas inserindo os headers `x-user-id` e `x-user-role` diretamente na interface.
-
----
-
-### 📝 Manual dos Endpoints
-
-Abaixo estão listados os caminhos HTTP com exemplos completos de corpo e headers para testes manuais.
-
-### 📌 Usuários (Users)
-
-#### Criar Usuário
-- **Rota:** `POST /users`
-- **Headers:** `x-user-id: 1`, `x-user-role: admin`
-- **Request Body:**
-  ```json
-  {
-    "name": "Prof. Carlos",
-    "email": "carlos@escola.com",
-    "role": "teacher"
-  }
-  ```
-- **Response (201 Created):**
-  ```json
-  {
-    "id": 2,
-    "name": "Prof. Carlos",
-    "email": "carlos@escola.com",
-    "role": "teacher"
-  }
-  ```
-
-#### Listar Usuários
-- **Rota:** `GET /users`
-- **Headers:** `x-user-id: 1`, `x-user-role: admin`
-- **Response (200 OK):**
-  ```json
-  [
-    {
-      "id": 1,
-      "name": "Admin",
-      "email": "admin@escola.com",
-      "role": "admin"
-    }
-  ]
-  ```
-
----
-
-### 📌 Postagens (Posts)
-
-#### Criar Post
-- **Rota:** `POST /posts`
-- **Headers:** `x-user-id: 2`, `x-user-role: teacher`
-- **Request Body:**
-  ```json
-  {
-    "title": "Introdução ao TypeScript",
-    "content": "Nesta aula vamos aprender os conceitos básicos do TS...",
-    "url": "https://meublog.com/imagem-aula.png"
-  }
-  ```
-  *(Nota: Se o campo `author` não for passado no payload, o sistema resolverá automaticamente o nome do autor com base no `x-user-id` passado no header).*
-- **Response (201 Created):**
-  ```json
-  {
-    "id": 1,
-    "title": "Introdução ao TypeScript",
-    "content": "Nesta aula vamos aprender os conceitos básicos do TS...",
-    "author": "Prof. Carlos",
-    "url": "https://meublog.com/imagem-aula.png",
-    "createdBy": 2,
-    "createdAt": "2026-07-12T00:30:00.000Z",
-    "updatedAt": "2026-07-12T00:30:00.000Z"
-  }
-  ```
-
-#### Listar Posts
-- **Rota:** `GET /posts`
-- **Headers:** `x-user-id: 2`, `x-user-role: teacher`
-- **Response (200 OK):**
-  *(Se for professor, retorna apenas os posts criados por ele. Se for admin, retorna de todos).*
-
-#### Buscar Posts por Palavra-Chave
-- **Rota:** `GET /posts/search?q=TypeScript`
-- **Headers:** `x-user-id: 2`, `x-user-role: teacher`
-- **Response (200 OK):**
-  *(Busca palavras-chave nos títulos e conteúdos dos posts aplicáveis ao escopo do usuário).*
-
-#### Obter Post por ID
-- **Rota:** `GET /posts/:id`
-- **Headers:** `x-user-id: 3`, `x-user-role: student`
-- **Response (200 OK):**
-  *(Disponível para todas as roles).*
-
-#### Atualizar Post
-- **Rota:** `PUT /posts/:id`
-- **Headers:** `x-user-id: 2`, `x-user-role: teacher`
-- **Request Body:**
-  ```json
-  {
-    "title": "TypeScript Avançado"
-  }
-  ```
-- **Response (200 OK):**
-  ```json
-  {
-    "id": 1,
-    "title": "TypeScript Avançado",
-    "content": "Nesta aula vamos aprender os conceitos básicos do TS...",
-    "author": "Prof. Carlos",
-    "url": "https://meublog.com/imagem-aula.png",
-    "createdBy": 2,
-    "createdAt": "2026-07-12T00:30:00.000Z",
-    "updatedAt": "2026-07-12T00:32:00.000Z"
-  }
-  ```
-
-#### Excluir Post
-- **Rota:** `DELETE /posts/:id`
-- **Headers:** `x-user-id: 2`, `x-user-role: teacher`
-- **Response (204 No Content):**
-  *(Retorna sem corpo em caso de sucesso).*
-
----
-
-## 🧪 Cobertura de Testes Unitários
-
-O projeto possui suporte a testes unitários automatizados utilizando o framework **Jest**. Atualmente, a cobertura do projeto é de **53.84%** das linhas globais e **100% de cobertura** nos casos de uso críticos (`CreatePostUseCase`, `UpdatePostUseCase`, `DeletePostUseCase`).
-
-### Como rodar os testes:
-Utilizando o ambiente conteinerizado do Docker:
+Copie o arquivo de exemplo e ajuste os valores locais:
 
 ```bash
-# Executar todos os testes
-docker-compose exec api npm run test
-
-# Executar todos os testes gerando relatório de cobertura de código
-docker-compose exec api npm run test:cov
+copy .env.example .env
 ```
 
----
+No macOS/Linux, use `cp .env.example .env`.
 
-## 🚀 Integração e Entrega Contínua (CI/CD)
+O `.env` real não deve ser commitado. As principais variáveis são:
 
-O projeto está integrado com **GitHub Actions** através do workflow configurado em `.github/workflows/ci-cd.yml`.
-A cada push ou pull request na branch `main`:
-- Um banco de dados Postgres é montado temporariamente na nuvem do GitHub.
-- O Node roda o setup do projeto e instala dependências.
-- Executa a compilação do TypeScript (`npm run build`).
-- Executa todos os testes unitários (`npm test`).
-- Se todas as etapas passarem, o pipeline prossegue para a etapa de deploy automático.
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=change-me
+DB_NAME=blog_escolar
+PORT=3000
+JWT_SECRET=change-this-in-a-real-environment
+JWT_EXPIRES_IN=8h
+FRONTEND_ORIGIN=http://localhost:5173
+DEFAULT_ADMIN_EMAIL=admin@escola.com
+DEFAULT_ADMIN_PASSWORD=change-me
+```
+
+## Execução com Docker
+
+Na raiz do projeto:
+
+```bash
+docker compose up -d --build
+```
+
+Esse comando inicia o PostgreSQL e a API em `http://localhost:3000`.
+
+O frontend pode ser executado localmente em outro terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Abra `http://localhost:5173`.
+
+## Execução local
+
+Com o PostgreSQL disponível e o `.env` configurado:
+
+```bash
+# Backend, na raiz
+npm install
+npm run dev
+
+# Frontend, em outro terminal
+cd frontend
+npm install
+npm run dev
+```
+
+Para gerar as versões de produção:
+
+```bash
+# Backend
+npm run build
+
+# Frontend
+cd frontend
+npm run build
+```
+
+## Autenticação e autorização
+
+O login usa email e senha. As senhas são armazenadas com bcrypt e nunca retornadas pela API. Após o login, o backend envia um JWT em um cookie `httpOnly` chamado `auth_token`.
+
+O frontend envia cookies com `withCredentials: true` e restaura a sessão usando `GET /auth/me`. O cookie pode ser usado pelo navegador ou pelo Insomnia. Como alternativa, a API também aceita `Authorization: Bearer <jwt>`.
+
+### Papéis
+
+- **Professor (`teacher`):** pode criar posts, editar/excluir os próprios posts, trocar a própria senha e acessar a administração dos próprios posts.
+- **Administrador (`admin`):** possui as permissões de professor e pode gerenciar usuários e visualizar todos os posts na área administrativa.
+- **Aluno (`student`):** não pode fazer login pela interface atual. Posts são públicos para leitura, então alunos e visitantes podem navegar sem conta.
+
+### Rotas protegidas
+
+- `POST /posts`: professor ou administrador.
+- `PUT /posts/:id`: autor do post ou administrador.
+- `DELETE /posts/:id`: autor do post ou administrador.
+- `POST /users` e `GET /users`: administrador.
+- `PUT /auth/password`: qualquer usuário autenticado.
+
+### Rotas públicas
+
+- `GET /posts`: lista todos os posts.
+- `GET /posts/:id`: lê um post.
+- `GET /posts/search?q=termo`: busca posts.
+- `POST /auth/register`: cadastro público somente para professores.
+- `POST /auth/login`: login de professores e administradores.
+
+## Endpoints principais
+
+### Criar conta de professor
+
+`POST http://localhost:3000/auth/register`
+
+```json
+{
+  "name": "Ana Souza",
+  "email": "ana@escola.com",
+  "password": "SenhaForte123",
+  "role": "teacher"
+}
+```
+
+O cadastro já inicia a sessão e retorna o usuário sem a senha.
+
+### Login
+
+`POST http://localhost:3000/auth/login`
+
+```json
+{
+  "email": "ana@escola.com",
+  "password": "SenhaForte123"
+}
+```
+
+### Trocar senha
+
+`PUT http://localhost:3000/auth/password`
+
+```json
+{
+  "currentPassword": "SenhaForte123",
+  "newPassword": "OutraSenha456"
+}
+```
+
+Essa rota exige a sessão criada no login.
+
+### Criar post
+
+`POST http://localhost:3000/posts`
+
+```json
+{
+  "title": "Introdução ao TypeScript",
+  "content": "Nesta aula vamos aprender os conceitos básicos do TypeScript."
+}
+```
+
+O autor é preenchido automaticamente a partir do usuário autenticado. Não é necessário enviar `author`.
+
+### Listar e buscar posts
+
+```text
+GET http://localhost:3000/posts
+GET http://localhost:3000/posts/search?q=TypeScript
+GET http://localhost:3000/posts/1
+```
+
+Essas rotas são públicas e retornam posts de todos os professores.
+
+## Frontend
+
+A interface React possui:
+
+- Página pública de listagem com busca.
+- Leitura de posts e comentários locais no navegador.
+- Cadastro e login de professores.
+- Criação e edição de posts para professores autenticados.
+- Administração dos próprios posts para professores.
+- Administração de todos os posts e usuários para administradores.
+- Troca de senha para usuários autenticados.
+- Formulários responsivos e componentes reutilizáveis com styled-components.
+
+Os comentários atuais são armazenados no `localStorage` do navegador. Eles ainda não são persistidos no PostgreSQL nem compartilhados entre dispositivos.
+
+## Testes
+
+Na raiz do projeto:
+
+```bash
+npm test
+npm run test:cov
+npm run build
+```
+
+Para validar o frontend:
+
+```bash
+cd frontend
+npm run build
+```
+
+## Swagger
+
+Com a API em execução, acesse:
+
+**http://localhost:3000/api-docs**
+
+O Swagger documenta autenticação, cadastro, login, troca de senha, posts e usuários.
+
+## CI/CD
+
+O projeto possui workflow em `.github/workflows/ci-cd.yml`. O pipeline instala dependências, prepara o PostgreSQL, executa o build TypeScript e roda os testes antes de continuar para as etapas de entrega configuradas.
+
+## Relato de desenvolvimento
+
+As dificuldades encontradas durante a implementação do frontend e da autenticação estão documentadas em [frontend/README.md](frontend/README.md), em primeira pessoa, como parte do relato do trabalho de pós-graduação em desenvolvimento full stack.
