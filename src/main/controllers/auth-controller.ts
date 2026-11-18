@@ -6,7 +6,7 @@ import { AUTH_COOKIE_NAME, signToken } from '../auth/jwt';
 import { getAuthenticatedUser } from '../auth/authorization';
 import { UserRepository } from '../../domain/user-repository';
 
-const SELF_REGISTRATION_ROLES = ['teacher'];
+const SELF_REGISTRATION_ROLES = ['teacher', 'student'];
 
 const cookieOptions: CookieOptions = {
   httpOnly: true,
@@ -27,7 +27,7 @@ export class AuthController {
     try {
       const role = req.body.role;
       if (!SELF_REGISTRATION_ROLES.includes(role)) {
-        throw new Error('Self-registration is only allowed for teacher accounts.');
+        throw new Error('Self-registration is only allowed for teacher and student accounts.');
       }
 
       const user = await this.createUserUseCase.execute({ ...req.body, role });

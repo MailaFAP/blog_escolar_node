@@ -93,6 +93,36 @@ exports.swaggerDocument = {
         },
     },
     paths: {
+        '/teachers': {
+            post: {
+                summary: 'Cadastrar outro professor(a)',
+                description: 'Disponível para professores e administradores autenticados. Cria somente contas de professor e não altera a sessão atual.',
+                tags: ['Usuários'],
+                security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                required: ['name', 'email', 'password'],
+                                properties: {
+                                    name: { type: 'string', example: 'Ana Souza' },
+                                    email: { type: 'string', example: 'ana@escola.com' },
+                                    password: { type: 'string', format: 'password', example: 'SenhaForte123' },
+                                },
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    201: { description: 'Docente cadastrado.', content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } },
+                    400: { description: 'Dados inválidos ou email em uso.' },
+                    401: { description: 'Autenticação necessária.' },
+                    403: { description: 'Acesso negado.' },
+                },
+            },
+        },
         '/auth/register': {
             post: {
                 summary: 'Criar a própria conta de professor(a)',

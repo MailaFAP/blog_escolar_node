@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { AUTH_COOKIE_NAME, verifyToken } from './jwt';
+import { database } from '../../infra/database';
 
 export interface AuthenticatedUser {
   id: number;
@@ -15,34 +16,38 @@ declare global {
   }
 }
 
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
-  const user = getAuthenticatedUser(req);
+async function loadCurrentUser(req: Request): Promise<AuthenticatedUser | null> {
+  const tokenUser = getAuthenticatedUser(req);
+  if (!tokenUser) return null;
+  const result = await database.query('SELECT id, role, permissions FROM users WHERE id = $1', [tokenUser.id]);
+  const row = result.rows[0];
+  if (!row) return null;
+  const permissions = Array.isArray(row.permissions) ? row.permissions.filter((value: unknown): value is string => typeof value === 'string') : [];
+  return { id: row.id, role: row.role, permissions };
+}
 
-  if (!user) {
-    res.status(401).json({ message: 'Authentication required.' });
-    return;
+export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const user = await loadCurrentUser(req);
+    if (!user) { res.status(401).json({ message: 'Authentication required.' }); return; }
+    req.user = user;
+    next();
+  } catch {
+    res.status(503).json({ message: 'Authentication temporarily unavailable.' });
   }
-
-  req.user = user;
-  next();
 }
 
 export function authorize(requiredPermission: string) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const user = getAuthenticatedUser(req);
-
-    if (!user) {
-      res.status(401).json({ message: 'Authentication required.' });
-      return;
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const user = await loadCurrentUser(req);
+      if (!user) { res.status(401).json({ message: 'Authentication required.' }); return; }
+      if (!hasPermission(user, requiredPermission)) { res.status(403).json({ message: 'Access denied.' }); return; }
+      req.user = user;
+      next();
+    } catch {
+      res.status(503).json({ message: 'Authentication temporarily unavailable.' });
     }
-
-    if (!hasPermission(user, requiredPermission)) {
-      res.status(403).json({ message: 'Access denied.' });
-      return;
-    }
-
-    req.user = user;
-    next();
   };
 }
 

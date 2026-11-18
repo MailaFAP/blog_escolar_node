@@ -90,10 +90,98 @@ export const swaggerDocument = {
     },
   },
   paths: {
+    '/teachers': {
+      get: {
+        summary: 'Listar docentes',
+        tags: ['Usuários'],
+        security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+        responses: { 200: { description: 'Lista de docentes.' }, 401: { description: 'Autenticação necessária.' }, 403: { description: 'Acesso negado.' } },
+      },
+      post: {
+        summary: 'Cadastrar outro professor(a)',
+        description: 'Disponível para professores e administradores autenticados. Cria somente contas de professor e não altera a sessão atual.',
+        tags: ['Usuários'],
+        security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'email', 'password'],
+                properties: {
+                  name: { type: 'string', example: 'Ana Souza' },
+                  email: { type: 'string', example: 'ana@escola.com' },
+                  password: { type: 'string', format: 'password', example: 'SenhaForte123' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Docente cadastrado.', content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } },
+          400: { description: 'Dados inválidos ou email em uso.' },
+          401: { description: 'Autenticação necessária.' },
+          403: { description: 'Acesso negado.' },
+        },
+      },
+    },
+    '/teachers/{id}': {
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } }],
+      get: {
+        summary: 'Consultar docente',
+        tags: ['Usuários'],
+        security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+        responses: { 200: { description: 'Dados do docente.' }, 401: { description: 'Autenticação necessária.' }, 403: { description: 'Acesso negado.' }, 404: { description: 'Docente não encontrado.' } },
+      },
+      put: {
+        summary: 'Editar nome e email de docente',
+        tags: ['Usuários'],
+        security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['name', 'email'], properties: { name: { type: 'string' }, email: { type: 'string', format: 'email' } } } } } },
+        responses: { 200: { description: 'Docente atualizado.' }, 400: { description: 'Dados inválidos.' }, 401: { description: 'Autenticação necessária.' }, 403: { description: 'Acesso negado.' }, 404: { description: 'Docente não encontrado.' }, 409: { description: 'Email em uso.' } },
+      },
+      delete: {
+        summary: 'Excluir docente',
+        description: 'Disponível para professores e administradores autenticados. Não é possível excluir a própria conta (400). Os posts do docente são mantidos sem vínculo com a conta.',
+        tags: ['Usuários'],
+        security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+        responses: { 204: { description: 'Docente excluído.' }, 400: { description: 'Identificador inválido.' }, 401: { description: 'Autenticação necessária.' }, 403: { description: 'Acesso negado.' }, 404: { description: 'Docente não encontrado.' } },
+      },
+    },
+    '/students': {
+      get: {
+        summary: 'Listar estudantes', tags: ['Usuários'], security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+        responses: { 200: { description: 'Lista de estudantes.' }, 401: { description: 'Autenticação necessária.' }, 403: { description: 'Acesso negado.' } },
+      },
+      post: {
+        summary: 'Cadastrar estudante',
+        description: 'Disponível para qualquer usuário autenticado. Cria somente contas de estudante.',
+        tags: ['Usuários'], security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['name', 'email', 'password'], properties: { name: { type: 'string' }, email: { type: 'string', format: 'email' }, password: { type: 'string', format: 'password' } } } } } },
+        responses: { 201: { description: 'Estudante cadastrado.', content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } }, 400: { description: 'Dados inválidos ou email em uso.' }, 401: { description: 'Autenticação necessária.' }, 403: { description: 'Acesso negado.' } },
+      },
+    },
+    '/students/{id}': {
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } }],
+      get: {
+        summary: 'Consultar estudante', tags: ['Usuários'], security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+        responses: { 200: { description: 'Dados do estudante.' }, 401: { description: 'Autenticação necessária.' }, 403: { description: 'Acesso negado.' }, 404: { description: 'Estudante não encontrado.' } },
+      },
+      put: {
+        summary: 'Editar nome e email de estudante', tags: ['Usuários'], security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['name', 'email'], properties: { name: { type: 'string' }, email: { type: 'string', format: 'email' } } } } } },
+        responses: { 200: { description: 'Estudante atualizado.' }, 400: { description: 'Dados inválidos.' }, 401: { description: 'Autenticação necessária.' }, 403: { description: 'Acesso negado.' }, 404: { description: 'Estudante não encontrado.' }, 409: { description: 'Email em uso.' } },
+      },
+      delete: {
+        summary: 'Excluir estudante', description: 'Disponível para qualquer usuário autenticado. Não é possível excluir a própria conta (400).', tags: ['Usuários'], security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+        responses: { 204: { description: 'Estudante excluído.' }, 400: { description: 'Identificador inválido.' }, 401: { description: 'Autenticação necessária.' }, 403: { description: 'Acesso negado.' }, 404: { description: 'Estudante não encontrado.' } },
+      },
+    },
     '/auth/register': {
       post: {
-        summary: 'Criar a própria conta de professor(a)',
-        description: 'Auto-cadastro exclusivo para professores(as). Alunos(as) e visitantes não precisam de conta para ler os posts. Não permite criar contas com papel `admin` ou `student`. Autentica automaticamente após o cadastro (cookie httpOnly).',
+        summary: 'Criar a própria conta (professor ou estudante)',
+        description: 'Auto-cadastro para professores(as) e estudantes. Não permite criar contas com papel `admin`. Autentica automaticamente após o cadastro (cookie httpOnly).',
         tags: ['Autenticação'],
         security: [],
         requestBody: {
@@ -107,7 +195,7 @@ export const swaggerDocument = {
                   name: { type: 'string', example: 'Ana Souza' },
                   email: { type: 'string', example: 'ana@escola.com' },
                   password: { type: 'string', format: 'password', example: 'SenhaForte123' },
-                  role: { type: 'string', enum: ['teacher'], example: 'teacher' },
+                  role: { type: 'string', enum: ['teacher', 'student'], example: 'teacher' },
                 },
               },
             },
@@ -136,7 +224,7 @@ export const swaggerDocument = {
     '/auth/login': {
       post: {
         summary: 'Autenticar usuário',
-        description: 'Valida email e senha e retorna um cookie httpOnly (`auth_token`) com o JWT da sessão. Restrito a contas `teacher`/`admin`; leitura de posts não exige login.',
+        description: 'Valida email e senha e retorna um cookie httpOnly (`auth_token`) com o JWT da sessão. Restrito a contas `teacher`, `student` ou `admin`; a leitura de posts não exige login.',
         tags: ['Autenticação'],
         security: [],
         requestBody: {

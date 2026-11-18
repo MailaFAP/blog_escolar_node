@@ -55,6 +55,34 @@ export class PostgresUserRepository implements UserRepository {
     await this.pool.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [passwordHash, id]);
   }
 
+  async updateTeacher(id: number, name: string, email: string): Promise<User | null> {
+    const result = await this.pool.query(
+      `UPDATE users SET name = $1, email = $2 WHERE id = $3 AND role = 'teacher'
+       RETURNING id, name, email, role, permissions, password_hash, created_at`,
+      [name, email, id]
+    );
+    return result.rows[0] ? this.mapRowToUser(result.rows[0]) : null;
+  }
+
+  async deleteTeacher(id: number): Promise<boolean> {
+    const result = await this.pool.query("DELETE FROM users WHERE id = $1 AND role = 'teacher'", [id]);
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async updateStudent(id: number, name: string, email: string): Promise<User | null> {
+    const result = await this.pool.query(
+      `UPDATE users SET name = $1, email = $2 WHERE id = $3 AND role = 'student'
+       RETURNING id, name, email, role, permissions, password_hash, created_at`,
+      [name, email, id]
+    );
+    return result.rows[0] ? this.mapRowToUser(result.rows[0]) : null;
+  }
+
+  async deleteStudent(id: number): Promise<boolean> {
+    const result = await this.pool.query("DELETE FROM users WHERE id = $1 AND role = 'student'", [id]);
+    return (result.rowCount ?? 0) > 0;
+  }
+
   private mapRowToUser(row: any): User {
     return new User(
       row.id,

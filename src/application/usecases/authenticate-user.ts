@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { User } from '../../domain/user';
 import { UserRepository } from '../../domain/user-repository';
 
-const LOGIN_ALLOWED_ROLES = ['teacher', 'admin'];
+const LOGIN_ALLOWED_ROLES = ['teacher', 'student', 'admin'];
 
 export interface AuthenticateUserInput {
   email: string;
@@ -31,9 +31,9 @@ export class AuthenticateUserUseCase {
       throw new Error('Invalid email or password.');
     }
 
-    // Posts are publicly readable, so only teacher/admin accounts need to authenticate.
+    // Posts are publicly readable, but every known role may authenticate.
     if (!LOGIN_ALLOWED_ROLES.includes(user.role)) {
-      throw new Error('Only teacher accounts can log in.');
+      throw new Error('This account cannot log in.');
     }
 
     return user;
