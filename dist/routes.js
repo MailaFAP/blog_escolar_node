@@ -23,6 +23,7 @@ router.delete('/posts/:id', (0, authorization_1.authorize)('edit_post'), postCon
 router.get('/posts/search', postController.search);
 router.get('/posts', postController.list);
 router.get('/posts/:id', postController.getById);
+router.post('/teachers', authorization_1.authenticate, userController.createTeacher);
 router.post('/users', (0, authorization_1.authorize)('manage_users'), userController.create);
 router.get('/users', (0, authorization_1.authorize)('manage_users'), userController.list);
 exports.default = router;

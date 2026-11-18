@@ -15,6 +15,21 @@ class UserController {
                 res.status(400).json({ message });
             }
         };
+        this.createTeacher = async (req, res) => {
+            if (req.user?.role !== 'teacher' && req.user?.role !== 'admin') {
+                res.status(403).json({ message: 'Access denied.' });
+                return;
+            }
+            try {
+                const { name, email, password } = req.body;
+                const user = await this.createUserUseCase.execute({ name, email, password, role: 'teacher' });
+                res.status(201).json(user.toSafeJSON());
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : 'Unexpected error';
+                res.status(400).json({ message });
+            }
+        };
         this.list = async (_req, res) => {
             try {
                 const users = await this.listUsersUseCase.execute();

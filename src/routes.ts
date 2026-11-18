@@ -22,6 +22,16 @@ router.get('/posts/search', postController.search);
 router.get('/posts', postController.list);
 router.get('/posts/:id', postController.getById);
 
+router.post('/teachers', authenticate, userController.createTeacher);
+router.get('/teachers', authenticate, userController.listTeachers);
+router.get('/teachers/:id', authenticate, userController.getTeacher);
+router.put('/teachers/:id', authenticate, userController.updateTeacher);
+router.delete('/teachers/:id', authenticate, userController.deleteTeacher);
+router.get('/students', authenticate, userController.listStudents);
+router.post('/students', authenticate, userController.createStudent);
+router.get('/students/:id', authenticate, userController.getStudent);
+router.put('/students/:id', authenticate, userController.updateStudent);
+router.delete('/students/:id', authenticate, userController.deleteStudent);
 router.post('/users', authorize('manage_users'), userController.create);
 router.get('/users', authorize('manage_users'), userController.list);
 

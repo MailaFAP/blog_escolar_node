@@ -1,5 +1,6 @@
 import { CreateUserUseCase } from '../../application/usecases/create-user';
 import { ListUsersUseCase } from '../../application/usecases/list-users';
+import { UpdateTeacherUseCase } from '../../application/usecases/update-teacher';
 import { database } from '../../infra/database';
 import { PostgresUserRepository } from '../../infra/postgres/postgres-user-repository';
 import { UserController } from '../controllers/user-controller';
@@ -9,5 +10,5 @@ export function makeUserController(): UserController {
   const createUserUseCase = new CreateUserUseCase(repository);
   const listUsersUseCase = new ListUsersUseCase(repository);
 
-  return new UserController(createUserUseCase, listUsersUseCase);
+  return new UserController(createUserUseCase, listUsersUseCase, repository, new UpdateTeacherUseCase(repository));
 }
